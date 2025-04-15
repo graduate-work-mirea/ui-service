@@ -60,3 +60,41 @@ export interface TrainingResult {
     best_score: number;
   };
 }
+
+// New types for authentication
+export interface UserRegisterRequest {
+  email: string;
+  password: string;
+}
+
+export interface UserLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user_id: string;
+  email: string;
+  role: string;
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  created_at?: string;
+  last_login_at?: string;
+}
+
+// Statistics types
+export interface PredictionHistory {
+  id: string;
+  user_id: string;
+  request: PredictionRequest | PredictionRequestMinimal;
+  result: PredictionResult;
+  created_at: string;
+  endpoint_type: string;
+  minimal: boolean;
+}
+
+export interface UserStatistics {
+  user_id: string;
+  predictions: PredictionHistory[];
+}

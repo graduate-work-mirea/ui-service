@@ -13,8 +13,11 @@ RUN npm install
 # Copy all files
 COPY . .
 
-# Build the app
-RUN npm run build
+# Make the fix-deps script executable
+RUN chmod +x fix-deps.sh
+
+# Run the fix script to ensure all dependencies are installed
+RUN ./fix-deps.sh
 
 # Use nginx to serve the app
 FROM nginx:alpine
