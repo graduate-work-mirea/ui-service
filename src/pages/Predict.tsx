@@ -44,7 +44,7 @@ const initialMinimalFormData: PredictionRequestMinimal = {
 const Predict = () => {
   const [formData, setFormData] = useState<PredictionRequest>(initialFormData);
   const [minimalFormData, setMinimalFormData] = useState<PredictionRequestMinimal>(initialMinimalFormData);
-  const [isMinimalMode, setIsMinimalMode] = useState(false);
+  const [isMinimalMode, setIsMinimalMode] = useState(true);
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [isModelTrained, setIsModelTrained] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -412,6 +412,310 @@ const Predict = () => {
                     onChange={handleInputChange}
                   />
                 </div>
+
+                <div>
+                  <label htmlFor="discount_percentage" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Процент скидки *
+                  </label>
+                  <input
+                    type="number"
+                    name="discount_percentage"
+                    id="discount_percentage"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.discount_percentage}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="stock_level" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Уровень запасов *
+                  </label>
+                  <input
+                    type="number"
+                    name="stock_level"
+                    id="stock_level"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.stock_level}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="customer_rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Рейтинг покупателя *
+                  </label>
+                  <input
+                    type="number"
+                    name="customer_rating"
+                    id="customer_rating"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.customer_rating}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="review_count" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Количество отзывов *
+                  </label>
+                  <input
+                    type="number"
+                    name="review_count"
+                    id="review_count"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.review_count}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="delivery_days" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Дни доставки *
+                  </label>
+                  <input
+                    type="number"
+                    name="delivery_days"
+                    id="delivery_days"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.delivery_days}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="is_weekend" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Выходной день *
+                  </label>
+                  <input
+                    type="checkbox"
+                    name="is_weekend"
+                    id="is_weekend"
+                    className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    checked={formData.is_weekend}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="is_holiday" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Праздничный день *
+                  </label>
+                  <input
+                    type="checkbox"
+                    name="is_holiday"
+                    id="is_holiday"
+                    className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    checked={formData.is_holiday}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="day_of_week" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    День недели (0-6) *
+                  </label>
+                  <input
+                    type="number"
+                    name="day_of_week"
+                    id="day_of_week"
+                    min="0"
+                    max="6"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.day_of_week}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="month" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Месяц (1-12) *
+                  </label>
+                  <input
+                    type="number"
+                    name="month"
+                    id="month"
+                    min="1"
+                    max="12"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.month}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="quarter" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Квартал (1-4) *
+                  </label>
+                  <input
+                    type="number"
+                    name="quarter"
+                    id="quarter"
+                    min="1"
+                    max="4"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.quarter}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="sales_quantity_lag_1" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Количество продаж лаг 1 *
+                  </label>
+                  <input
+                    type="number"
+                    name="sales_quantity_lag_1"
+                    id="sales_quantity_lag_1"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.sales_quantity_lag_1}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="price_lag_1" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Цена лаг 1 *
+                  </label>
+                  <input
+                    type="number"
+                    name="price_lag_1"
+                    id="price_lag_1"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.price_lag_1}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="sales_quantity_lag_3" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Количество продаж лаг 3 *
+                  </label>
+                  <input
+                    type="number"
+                    name="sales_quantity_lag_3"
+                    id="sales_quantity_lag_3"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.sales_quantity_lag_3}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="price_lag_3" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Цена лаг 3 *
+                  </label>
+                  <input
+                    type="number"
+                    name="price_lag_3"
+                    id="price_lag_3"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.price_lag_3}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="sales_quantity_lag_7" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Количество продаж лаг 7 *
+                  </label>
+                  <input
+                    type="number"
+                    name="sales_quantity_lag_7"
+                    id="sales_quantity_lag_7"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.sales_quantity_lag_7}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="price_lag_7" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Цена лаг 7 *
+                  </label>
+                  <input
+                    type="number"
+                    name="price_lag_7"
+                    id="price_lag_7"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.price_lag_7}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="sales_quantity_rolling_mean_3" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Скользящее среднее продаж 3 *
+                  </label>
+                  <input
+                    type="number"
+                    name="sales_quantity_rolling_mean_3"
+                    id="sales_quantity_rolling_mean_3"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.sales_quantity_rolling_mean_3}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="price_rolling_mean_3" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Скользящее среднее цены 3 *
+                  </label>
+                  <input
+                    type="number"
+                    name="price_rolling_mean_3"
+                    id="price_rolling_mean_3"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.price_rolling_mean_3}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="sales_quantity_rolling_mean_7" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Скользящее среднее продаж 7 *
+                  </label>
+                  <input
+                    type="number"
+                    name="sales_quantity_rolling_mean_7"
+                    id="sales_quantity_rolling_mean_7"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.sales_quantity_rolling_mean_7}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="price_rolling_mean_7" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Скользящее среднее цены 7 *
+                  </label>
+                  <input
+                    type="number"
+                    name="price_rolling_mean_7"
+                    id="price_rolling_mean_7"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                    value={formData.price_rolling_mean_7}
+                    onChange={handleInputChange}
+                  />
+                </div>
               </>
             )}
           </div>
@@ -441,7 +745,7 @@ const Predict = () => {
           </div>
           
           <div className="px-4 py-5 sm:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-sm">
                 <h4 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Прогноз цены</h4>
                 <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
@@ -453,12 +757,22 @@ const Predict = () => {
               </div>
               
               <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-sm">
-                <h4 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Прогноз продаж</h4>
+                <h4 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Прогноз продаж (неделя)</h4>
                 <p className="text-3xl font-bold text-green-600 dark:text-green-400">
                   {Math.round(prediction.predicted_sales)} шт.
                 </p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Ожидаемое количество продаж при текущих условиях
+                  Ожидаемое количество продаж в неделю
+                </p>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-sm">
+                <h4 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Прогноз продаж (день)</h4>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  {(prediction.predicted_sales / 7).toFixed(1)} шт.
+                </p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Ожидаемое количество продаж в день
                 </p>
               </div>
             </div>

@@ -14,20 +14,50 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const authenticated = isAuthenticated();
 
+  // Function to apply theme to document
+  const applyTheme = (darkMode: boolean) => {
+    // Get the HTML element (document root)
+    const htmlElement = document.documentElement;
+    
+    if (darkMode) {
+      htmlElement.classList.add('dark');
+    } else {
+      htmlElement.classList.remove('dark');
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  };
+
+  // Initialize theme on component mount
   useEffect(() => {
-    // Check for user preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    // Check for saved preference in localStorage
+    const savedTheme = localStorage.getItem('theme');
+    
+    if (savedTheme === 'dark') {
       setIsDarkMode(true);
+      applyTheme(true);
+    } else if (savedTheme === 'light') {
+      setIsDarkMode(false);
+      applyTheme(false);
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      // If no saved preference, use system preference
+      setIsDarkMode(true);
+      applyTheme(true);
+    } else {
+      // Default to light mode if no preference and system is not dark
+      setIsDarkMode(false);
+      applyTheme(false);
     }
   }, []);
 
-  useEffect(() => {
-    // Apply dark mode to HTML element
-    document.documentElement.classList.toggle('dark', isDarkMode);
-  }, [isDarkMode]);
-
+  // Toggle theme function
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
+    setIsDarkMode((prevMode) => {
+      const newMode = !prevMode;
+      applyTheme(newMode);
+      return newMode;
+    });
   };
 
   const handleLogout = () => {
@@ -43,15 +73,15 @@ const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark:bg-gray-900' : 'bg-gray-50'} transition-colors duration-200`}>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {/* Header */}
-      <header className={`${isDarkMode ? 'dark:bg-gray-800' : 'bg-white'} shadow-sm sticky top-0 z-10 transition-colors duration-200`}>
+      <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Link to="/" className="flex items-center">
-                <Brain className={`h-8 w-8 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                <h1 className={`ml-3 text-2xl font-bold ${isDarkMode ? 'dark:text-white' : 'text-gray-900'}`}>
+                <Brain className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                <h1 className="ml-3 text-2xl font-bold text-gray-900 dark:text-white">
                   Система прогнозирования спроса
                 </h1>
               </Link>
@@ -95,8 +125,9 @@ const Layout = ({ children }: LayoutProps) => {
               
               <button
                 onClick={toggleTheme}
-                className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-700 text-yellow-200' : 'bg-gray-200 text-indigo-700'}`}
+                className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-700 text-yellow-200 hover:bg-gray-600' : 'bg-gray-200 text-indigo-700 hover:bg-gray-300'}`}
                 aria-label="Toggle dark mode"
+                title={isDarkMode ? "Включить светлую тему" : "Включить темную тему"}
               >
                 {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
@@ -111,9 +142,9 @@ const Layout = ({ children }: LayoutProps) => {
       </main>
 
       {/* Footer */}
-      <footer className={`${isDarkMode ? 'dark:bg-gray-800' : 'bg-white'} py-6 transition-colors duration-200`}>
+      <footer className="bg-white dark:bg-gray-800 py-6 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className={`text-center text-sm ${isDarkMode ? 'dark:text-gray-400' : 'text-gray-500'}`}>
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             &copy; {new Date().getFullYear()} Система прогнозирования спроса
           </p>
         </div>
