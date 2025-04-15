@@ -28,6 +28,19 @@ export interface PredictionRequest {
   price_rolling_mean_7: number;
 }
 
+export interface PredictionRequestMinimal {
+  product_name: string;
+  region: string;
+  seller: string;
+  prediction_date?: string;
+  price?: number;
+  original_price?: number;
+  stock_level?: number;
+  customer_rating?: number;
+  review_count?: number;
+  delivery_days?: number;
+}
+
 export interface PredictionResult {
   predicted_price: number;
   predicted_sales: number;
@@ -35,4 +48,15 @@ export interface PredictionResult {
 
 export interface ModelStatus {
   models_trained: boolean;
+}
+
+export interface TrainingResult {
+  price_model: {
+    best_iteration: number;
+    best_score: number;
+  };
+  sales_model: {
+    best_iteration: number;
+    best_score: number;
+  };
 }
