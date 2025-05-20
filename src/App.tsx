@@ -1,27 +1,18 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { isAuthenticated } from './api';
-
-// Pages
-import Login from './pages/Login';
-import Register from './pages/Register';
+import Home from './pages/Home';
 import Predict from './pages/Predict';
 import Statistics from './pages/Statistics';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import { isAuthenticated } from './api';
 
 // Components
 import Layout from './components/Layout';
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
-
-// Protected route component
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" />;
-  }
-  return <>{children}</>;
+const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+  return isAuthenticated() ? <>{children}</> : <Navigate to="/login" />;
 };
 
 const App: React.FC = () => {
@@ -33,26 +24,11 @@ const App: React.FC = () => {
       
       <Layout>
         <Routes>
+          <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+          <Route path="/predict" element={<PrivateRoute><Predict /></PrivateRoute>} />
+          <Route path="/statistics" element={<PrivateRoute><Statistics /></PrivateRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
-          <Route 
-            path="/predict" 
-            element={
-              <ProtectedRoute>
-                <Predict />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/statistics" 
-            element={
-              <ProtectedRoute>
-                <Statistics />
-              </ProtectedRoute>
-            } 
-          />
           
           {/* Redirect root to predict or login based on auth state */}
           <Route 

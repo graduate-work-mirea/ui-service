@@ -1,54 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Brain, BarChart3, RefreshCcw } from 'lucide-react';
-import { checkModelStatus, trainModels, makePrediction, makeMinimalPrediction, isAuthenticated } from '../api';
-import type { PredictionRequest, PredictionRequestMinimal, PredictionResult } from '../types';
+import { Brain, BarChart3, RefreshCcw, ChevronDown, ChevronUp, HelpCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { checkModelStatus, trainModels, makePrediction, isAuthenticated } from '../api';
+import type { PredictionRequest, PredictionResult } from '../types';
+
+// Field descriptions for tooltips
+const fieldDescriptions: Record<string, string> = {
+  product_name: "Название продукта. Уникальный идентификатор товара для анализа (например, 'Смартфон Apple iPhone 13'). Обязателен, так как определяет, что именно прогнозируется.",
+  category: "Категория продукта (например, 'Электроника', 'Одежда'). Нужна для классификации товара и выбора подходящей модели прогнозирования.",
+  current_price: "Текущая цена продукта в рублях. Базовый показатель для анализа динамики цен.",
+  region: "Регион анализа (например, 'Москва', 'Санкт-Петербург'). Учитывает региональные особенности спроса и предложения.",
+  brand: "Бренд продукта (например, 'Apple', 'Samsung'). Помогает учесть влияние бренда на спрос и цену.",
+  stock_level: "Текущий уровень запасов. Показывает доступность товара, что влияет на спрос.",
+  customer_rating: "Средняя оценка покупателей (от 0 до 5). Отражает привлекательность товара для потребителей.",
+  review_count: "Количество отзывов. Указывает на популярность товара, что коррелирует со спросом.",
+  delivery_days: "Среднее время доставки в днях. Влияет на решение о покупке и спрос.",
+  is_promo: "Находится ли товар на акции. Акции могут временно увеличивать спрос.",
+  competitor_prices: "Цены конкурентов на аналогичный товар. Помогают оценить конкурентоспособность текущей цены.",
+  historical_prices: "Исторические цены за последние дни (например, 7 дней). Используются для анализа трендов."
+};
 
 const initialFormData: PredictionRequest = {
+  // Required fields
   product_name: "",
-  brand: "",
   category: "",
+  current_price: 0,
   region: "",
-  seller: "",
-  price: 0,
-  original_price: 0,
-  discount_percentage: 0,
+  
+  // Optional fields
+  brand: "",
   stock_level: 0,
   customer_rating: 0,
   review_count: 0,
   delivery_days: 0,
-  is_weekend: false,
-  is_holiday: false,
-  day_of_week: 0,
-  month: 1,
-  quarter: 1,
-  sales_quantity_lag_1: 0,
-  price_lag_1: 0,
-  sales_quantity_lag_3: 0,
-  price_lag_3: 0,
-  sales_quantity_lag_7: 0,
-  price_lag_7: 0,
-  sales_quantity_rolling_mean_3: 0,
-  price_rolling_mean_3: 0,
-  sales_quantity_rolling_mean_7: 0,
-  price_rolling_mean_7: 0
-};
-
-const initialMinimalFormData: PredictionRequestMinimal = {
-  product_name: "",
-  region: "",
-  seller: "",
+  is_promo: false,
+  competitor_prices: [],
+  historical_prices: []
 };
 
 const Predict = () => {
   const [formData, setFormData] = useState<PredictionRequest>(initialFormData);
-  const [minimalFormData, setMinimalFormData] = useState<PredictionRequestMinimal>(initialMinimalFormData);
-  const [isMinimalMode, setIsMinimalMode] = useState(true);
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [isModelTrained, setIsModelTrained] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [predictionError, setPredictionError] = useState<string | null>(null);
+  const [showOptionalFields, setShowOptionalFields] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -94,48 +91,9 @@ const Predict = () => {
       setIsLoading(true);
       setPredictionError(null);
       
-      let result;
-      let attempts = 0;
-      let maxAttempts = 8;
-      let hasValidResult = false;
-      
-      while (attempts < maxAttempts && !hasValidResult) {
-        try {
-          if (isMinimalMode) {
-            result = await makeMinimalPrediction(minimalFormData);
-          } else {
-            result = await makePrediction(formData);
-          }
-          
-          // Check if we got zero values
-          if (result.predicted_price !== 0 || result.predicted_sales !== 0) {
-            hasValidResult = true;
-          } else {
-            attempts++;
-            if (attempts === maxAttempts) {
-              break;
-            }
-            // Small delay before retry
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        } catch (error) {
-          attempts++;
-          if (attempts === maxAttempts) {
-            throw error;
-          }
-          // Small delay before retry
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
-      
-      if (!hasValidResult && attempts === maxAttempts) {
-        setPredictionError("Невозможно сделать прогноз с текущими данными. Требуется дообучение модели.");
-        setPrediction(null);
-        toast.error('Прогноз невозможен с текущими данными');
-      } else {
-        setPrediction(result);
-        toast.success('Прогноз успешно получен');
-      }
+      const result = await makePrediction(formData);
+      setPrediction(result);
+      toast.success('Прогноз успешно получен');
     } catch (error) {
       toast.error('Ошибка при получении прогноза');
     } finally {
@@ -146,27 +104,39 @@ const Predict = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
     
-    if (isMinimalMode) {
-      setMinimalFormData((prev: PredictionRequestMinimal) => ({
-        ...prev,
-        [name]: type === 'number' ? (value === '' ? undefined : parseFloat(value)) : 
-                type === 'checkbox' ? (e.target as HTMLInputElement).checked :
-                value
-      }));
-    } else {
-      setFormData((prev: PredictionRequest) => ({
-        ...prev,
-        [name]: type === 'number' ? parseFloat(value) || 0 : 
-                type === 'checkbox' ? (e.target as HTMLInputElement).checked :
-                value
-      }));
-    }
+    setFormData((prev: PredictionRequest) => ({
+      ...prev,
+      [name]: type === 'number' ? (value === '' ? 0 : parseFloat(value)) : 
+              type === 'checkbox' ? (e.target as HTMLInputElement).checked :
+              value
+    }));
   };
 
-  const toggleInputMode = () => {
-    setIsMinimalMode(!isMinimalMode);
-    setPrediction(null);
+  const handleArrayInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const numbers = value.split(',').map(num => parseFloat(num.trim())).filter(num => !isNaN(num));
+    
+    setFormData((prev: PredictionRequest) => ({
+      ...prev,
+      [name]: numbers
+    }));
   };
+
+  const renderFieldWithTooltip = (name: string, label: string, required: boolean = false) => (
+    <div className="relative">
+      <div className="flex items-center">
+        <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label} {required && '*'}
+        </label>
+        <div className="group relative ml-1">
+          <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-500 cursor-help" />
+          <div className="absolute left-1/2 transform -translate-x-1/2 -top-2 mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+            {fieldDescriptions[name]}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -198,596 +168,298 @@ const Predict = () => {
         </div>
       </div>
       
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden mb-8">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-              {isMinimalMode ? 'Упрощенный режим прогнозирования' : 'Расширенный режим прогнозирования'}
-            </h3>
-            <button
-              onClick={toggleInputMode}
-              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-            >
-              {isMinimalMode ? 'Расширенный режим' : 'Упрощенный режим'}
-            </button>
+      <div className="flex gap-8">
+        {/* Form Section */}
+        <div className="flex-1">
+          <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+            <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                Форма прогнозирования
+              </h3>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
+              <div className="space-y-6">
+                {/* Required Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    {renderFieldWithTooltip('product_name', 'Название товара', true)}
+                    <input
+                      type="text"
+                      name="product_name"
+                      id="product_name"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                      value={formData.product_name}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  
+                  <div>
+                    {renderFieldWithTooltip('category', 'Категория', true)}
+                    <input
+                      type="text"
+                      name="category"
+                      id="category"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  
+                  <div>
+                    {renderFieldWithTooltip('current_price', 'Текущая цена (₽)', true)}
+                    <input
+                      type="number"
+                      name="current_price"
+                      id="current_price"
+                      required
+                      min="0"
+                      step="0.01"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                      value={formData.current_price}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  
+                  <div>
+                    {renderFieldWithTooltip('region', 'Регион', true)}
+                    <input
+                      type="text"
+                      name="region"
+                      id="region"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                      value={formData.region}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+
+                {/* Optional Fields Toggle */}
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowOptionalFields(!showOptionalFields)}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-indigo-300 dark:hover:bg-gray-600"
+                  >
+                    {showOptionalFields ? (
+                      <>
+                        <ChevronUp className="h-5 w-5 mr-2" />
+                        Скрыть дополнительные поля
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-5 w-5 mr-2" />
+                        Показать дополнительные поля
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Optional Fields */}
+                {showOptionalFields && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      {renderFieldWithTooltip('brand', 'Бренд')}
+                      <input
+                        type="text"
+                        name="brand"
+                        id="brand"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        value={formData.brand}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div>
+                      {renderFieldWithTooltip('stock_level', 'Уровень запасов')}
+                      <input
+                        type="number"
+                        name="stock_level"
+                        id="stock_level"
+                        min="0"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        value={formData.stock_level}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div>
+                      {renderFieldWithTooltip('customer_rating', 'Рейтинг покупателей (0-5)')}
+                      <input
+                        type="number"
+                        name="customer_rating"
+                        id="customer_rating"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        value={formData.customer_rating}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div>
+                      {renderFieldWithTooltip('review_count', 'Количество отзывов')}
+                      <input
+                        type="number"
+                        name="review_count"
+                        id="review_count"
+                        min="0"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        value={formData.review_count}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div>
+                      {renderFieldWithTooltip('delivery_days', 'Срок доставки (дней)')}
+                      <input
+                        type="number"
+                        name="delivery_days"
+                        id="delivery_days"
+                        min="0"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        value={formData.delivery_days}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="is_promo"
+                        id="is_promo"
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        checked={formData.is_promo}
+                        onChange={handleInputChange}
+                      />
+                      <label htmlFor="is_promo" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                        Товар на акции
+                      </label>
+                      <div className="group relative ml-1">
+                        <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-500 cursor-help" />
+                        <div className="absolute left-1/2 transform -translate-x-1/2 -top-2 mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                          {fieldDescriptions.is_promo}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      {renderFieldWithTooltip('competitor_prices', 'Цены конкурентов (через запятую)')}
+                      <input
+                        type="text"
+                        name="competitor_prices"
+                        id="competitor_prices"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        value={formData.competitor_prices?.join(', ')}
+                        onChange={handleArrayInputChange}
+                        placeholder="78990, 80990, 79500"
+                      />
+                    </div>
+
+                    <div>
+                      {renderFieldWithTooltip('historical_prices', 'Исторические цены (через запятую)')}
+                      <input
+                        type="text"
+                        name="historical_prices"
+                        id="historical_prices"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                        value={formData.historical_prices?.join(', ')}
+                        onChange={handleArrayInputChange}
+                        placeholder="79990, 79990, 80990, 79990, 78990"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 dark:bg-indigo-700 dark:hover:bg-indigo-600"
+                  >
+                    {isLoading ? 'Получение прогноза...' : 'Получить прогноз'}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
-        
-        <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {isMinimalMode ? (
-              // Minimal mode inputs
-              <>
-                <div>
-                  <label htmlFor="product_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Название товара *
-                  </label>
-                  <input
-                    type="text"
-                    name="product_name"
-                    id="product_name"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={minimalFormData.product_name}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="region" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Регион *
-                  </label>
-                  <input
-                    type="text"
-                    name="region"
-                    id="region"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={minimalFormData.region}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="seller" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Продавец *
-                  </label>
-                  <input
-                    type="text"
-                    name="seller"
-                    id="seller"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={minimalFormData.seller}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Цена
-                  </label>
-                  <input
-                    type="number"
-                    name="price"
-                    id="price"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={minimalFormData.price || ''}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="original_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Исходная цена
-                  </label>
-                  <input
-                    type="number"
-                    name="original_price"
-                    id="original_price"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={minimalFormData.original_price || ''}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="stock_level" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Уровень запасов
-                  </label>
-                  <input
-                    type="number"
-                    name="stock_level"
-                    id="stock_level"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={minimalFormData.stock_level || ''}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </>
-            ) : (
-              // Full mode inputs (showing only a subset for brevity)
-              <>
-                <div>
-                  <label htmlFor="product_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Название товара *
-                  </label>
-                  <input
-                    type="text"
-                    name="product_name"
-                    id="product_name"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.product_name}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="brand" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Бренд *
-                  </label>
-                  <input
-                    type="text"
-                    name="brand"
-                    id="brand"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.brand}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Категория *
-                  </label>
-                  <input
-                    type="text"
-                    name="category"
-                    id="category"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="region" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Регион *
-                  </label>
-                  <input
-                    type="text"
-                    name="region"
-                    id="region"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.region}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="seller" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Продавец *
-                  </label>
-                  <input
-                    type="text"
-                    name="seller"
-                    id="seller"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.seller}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Цена *
-                  </label>
-                  <input
-                    type="number"
-                    name="price"
-                    id="price"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="original_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Исходная цена *
-                  </label>
-                  <input
-                    type="number"
-                    name="original_price"
-                    id="original_price"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.original_price}
-                    onChange={handleInputChange}
-                  />
-                </div>
 
-                <div>
-                  <label htmlFor="discount_percentage" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Процент скидки *
-                  </label>
-                  <input
-                    type="number"
-                    name="discount_percentage"
-                    id="discount_percentage"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.discount_percentage}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="stock_level" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Уровень запасов *
-                  </label>
-                  <input
-                    type="number"
-                    name="stock_level"
-                    id="stock_level"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.stock_level}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="customer_rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Рейтинг покупателя *
-                  </label>
-                  <input
-                    type="number"
-                    name="customer_rating"
-                    id="customer_rating"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.customer_rating}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="review_count" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Количество отзывов *
-                  </label>
-                  <input
-                    type="number"
-                    name="review_count"
-                    id="review_count"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.review_count}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="delivery_days" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Дни доставки *
-                  </label>
-                  <input
-                    type="number"
-                    name="delivery_days"
-                    id="delivery_days"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.delivery_days}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="is_weekend" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Выходной день *
-                  </label>
-                  <input
-                    type="checkbox"
-                    name="is_weekend"
-                    id="is_weekend"
-                    className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    checked={formData.is_weekend}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="is_holiday" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Праздничный день *
-                  </label>
-                  <input
-                    type="checkbox"
-                    name="is_holiday"
-                    id="is_holiday"
-                    className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    checked={formData.is_holiday}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="day_of_week" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    День недели (0-6) *
-                  </label>
-                  <input
-                    type="number"
-                    name="day_of_week"
-                    id="day_of_week"
-                    min="0"
-                    max="6"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.day_of_week}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="month" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Месяц (1-12) *
-                  </label>
-                  <input
-                    type="number"
-                    name="month"
-                    id="month"
-                    min="1"
-                    max="12"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.month}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="quarter" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Квартал (1-4) *
-                  </label>
-                  <input
-                    type="number"
-                    name="quarter"
-                    id="quarter"
-                    min="1"
-                    max="4"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.quarter}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="sales_quantity_lag_1" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Количество продаж лаг 1 *
-                  </label>
-                  <input
-                    type="number"
-                    name="sales_quantity_lag_1"
-                    id="sales_quantity_lag_1"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.sales_quantity_lag_1}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="price_lag_1" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Цена лаг 1 *
-                  </label>
-                  <input
-                    type="number"
-                    name="price_lag_1"
-                    id="price_lag_1"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.price_lag_1}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="sales_quantity_lag_3" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Количество продаж лаг 3 *
-                  </label>
-                  <input
-                    type="number"
-                    name="sales_quantity_lag_3"
-                    id="sales_quantity_lag_3"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.sales_quantity_lag_3}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="price_lag_3" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Цена лаг 3 *
-                  </label>
-                  <input
-                    type="number"
-                    name="price_lag_3"
-                    id="price_lag_3"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.price_lag_3}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="sales_quantity_lag_7" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Количество продаж лаг 7 *
-                  </label>
-                  <input
-                    type="number"
-                    name="sales_quantity_lag_7"
-                    id="sales_quantity_lag_7"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.sales_quantity_lag_7}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="price_lag_7" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Цена лаг 7 *
-                  </label>
-                  <input
-                    type="number"
-                    name="price_lag_7"
-                    id="price_lag_7"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.price_lag_7}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="sales_quantity_rolling_mean_3" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Скользящее среднее продаж 3 *
-                  </label>
-                  <input
-                    type="number"
-                    name="sales_quantity_rolling_mean_3"
-                    id="sales_quantity_rolling_mean_3"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.sales_quantity_rolling_mean_3}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="price_rolling_mean_3" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Скользящее среднее цены 3 *
-                  </label>
-                  <input
-                    type="number"
-                    name="price_rolling_mean_3"
-                    id="price_rolling_mean_3"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.price_rolling_mean_3}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="sales_quantity_rolling_mean_7" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Скользящее среднее продаж 7 *
-                  </label>
-                  <input
-                    type="number"
-                    name="sales_quantity_rolling_mean_7"
-                    id="sales_quantity_rolling_mean_7"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.sales_quantity_rolling_mean_7}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="price_rolling_mean_7" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Скользящее среднее цены 7 *
-                  </label>
-                  <input
-                    type="number"
-                    name="price_rolling_mean_7"
-                    id="price_rolling_mean_7"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                    value={formData.price_rolling_mean_7}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-          
-          <div className="mt-6">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 dark:bg-indigo-700 dark:hover:bg-indigo-600 w-full sm:w-auto"
-            >
-              {isLoading ? 'Обработка...' : 'Получить прогноз'}
-            </button>
-          </div>
-        </form>
-      </div>
-      
-      {/* Display prediction results */}
-      {prediction && (
-        <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-              Результаты прогнозирования
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
-              Основано на данных модели машинного обучения
-            </p>
-          </div>
-          
-          <div className="px-4 py-5 sm:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-sm">
-                <h4 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Прогноз цены</h4>
-                <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
-                  {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(prediction.predicted_price)}
-                </p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Рекомендуемая цена на основе анализа рынка и спроса
-                </p>
+        {/* Results Section */}
+        {prediction && (
+          <div className="w-96">
+            <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden sticky top-8">
+              <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                  Результаты прогноза
+                </h3>
               </div>
-              
-              <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-sm">
-                <h4 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Прогноз продаж (неделя)</h4>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                  {Math.round(prediction.predicted_sales)} шт.
-                </p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Ожидаемое количество продаж в неделю
-                </p>
-              </div>
-              
-              <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg shadow-sm">
-                <h4 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Прогноз продаж (день)</h4>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                  {(prediction.predicted_sales / 7).toFixed(1)} шт.
-                </p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Ожидаемое количество продаж в день
-                </p>
+              <div className="px-4 py-5 sm:p-6">
+                <dl className="space-y-6">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Прогнозируемая цена</dt>
+                    <dd className="mt-1 flex items-center text-2xl font-semibold">
+                      <span className={prediction.predicted_price > formData.current_price ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                        {prediction.predicted_price.toLocaleString('ru-RU')} ₽
+                      </span>
+                      {prediction.predicted_price > formData.current_price ? (
+                        <TrendingUp className="ml-2 h-5 w-5 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <TrendingDown className="ml-2 h-5 w-5 text-red-600 dark:text-red-400" />
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Прогнозируемый рост спроса</dt>
+                    <dd className="mt-1 flex items-center text-2xl font-semibold">
+                      <span className={prediction.demand_growth_percentage > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                        {prediction.demand_growth_percentage > 0 ? '+' : ''}{prediction.demand_growth_percentage}%
+                      </span>
+                      {prediction.demand_growth_percentage > 0 ? (
+                        <TrendingUp className="ml-2 h-5 w-5 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <TrendingDown className="ml-2 h-5 w-5 text-red-600 dark:text-red-400" />
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Доверительный интервал</dt>
+                    <dd className="mt-1 text-lg text-gray-900 dark:text-white">
+                      {prediction.confidence_interval[0].toLocaleString('ru-RU')} ₽ - {prediction.confidence_interval[1].toLocaleString('ru-RU')} ₽
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Рекомендации</dt>
+                    <dd className="mt-1 text-lg text-gray-900 dark:text-white">
+                      {prediction.recommendations}
+                    </dd>
+                  </div>
+                </dl>
               </div>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Display prediction error */}
+        )}
+      </div>
+
       {predictionError && (
-        <div className="bg-red-50 dark:bg-red-900 border-l-4 border-red-500 p-4 mt-6">
+        <div className="mt-4 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-md p-4">
           <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
             <div className="ml-3">
-              <p className="text-sm text-red-700 dark:text-red-200">
-                {predictionError}
-              </p>
+              <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+                Ошибка прогноза
+              </h3>
+              <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                <p>{predictionError}</p>
+              </div>
             </div>
           </div>
         </div>

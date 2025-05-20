@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { getUserStatistics, isAuthenticated } from '../api';
 import type { UserStatistics, PredictionRequest, PredictionRequestMinimal } from '../types';
+import { TrendingUp, TrendingDown, Package, Star, Truck, Tag, DollarSign, BarChart2 } from 'lucide-react';
 
 const Statistics = () => {
   const [stats, setStats] = useState<UserStatistics | null>(null);
@@ -45,11 +46,8 @@ const Statistics = () => {
     }).format(date);
   };
 
-  // Helper function to format the request for display
-  const formatRequest = (request: PredictionRequest | PredictionRequestMinimal) => {
-    // Create a formatted version that shows actual values
-    const formattedRequest = { ...request };
-    return JSON.stringify(formattedRequest, null, 2);
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(price);
   };
 
   if (isLoading) {
@@ -113,48 +111,111 @@ const Statistics = () => {
         {stats.predictions.map((prediction) => (
           <div key={prediction.id} className="bg-white dark:bg-gray-800 rounded-md shadow overflow-hidden">
             <div className="px-4 py-5 border-b border-gray-200 dark:border-gray-700 sm:px-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                  Прогноз от {formatDate(prediction.created_at)}
-                </h3>
-                <span className={`px-2 py-1 text-xs rounded-md ${prediction.minimal ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'}`}>
-                  {prediction.minimal ? 'Минимальный режим' : 'Полный режим'}
-                </span>
-              </div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                Прогноз от {formatDate(prediction.created_at)}
+              </h3>
             </div>
             
             <div className="px-4 py-5 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Input Parameters */}
                 <div>
-                  <h4 className="text-md font-semibold mb-3 text-gray-700 dark:text-gray-300">Параметры запроса</h4>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-4 overflow-auto max-h-96">
-                    <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                      {formatRequest(prediction.request)}
-                    </pre>
+                  <h4 className="text-md font-semibold mb-4 text-gray-700 dark:text-gray-300">Параметры запроса</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center">
+                      <Package className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-gray-600 dark:text-gray-400">Товар:</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-white">{prediction.request.product_name}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Tag className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-gray-600 dark:text-gray-400">Категория:</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-white">{prediction.request.category}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <DollarSign className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-gray-600 dark:text-gray-400">Текущая цена:</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-white">{formatPrice(prediction.request.current_price)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Star className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-gray-600 dark:text-gray-400">Рейтинг:</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-white">{prediction.request.customer_rating} ({prediction.request.review_count} отзывов)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Truck className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-gray-600 dark:text-gray-400">Срок доставки:</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-white">{prediction.request.delivery_days} дней</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Package className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-gray-600 dark:text-gray-400">Остаток на складе:</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-white">{prediction.request.stock_level} шт.</span>
+                    </div>
                   </div>
                 </div>
-                
+
+                {/* Prediction Results */}
                 <div>
-                  <h4 className="text-md font-semibold mb-3 text-gray-700 dark:text-gray-300">Результаты прогноза</h4>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-white dark:bg-gray-800 p-4 rounded-md shadow-sm">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Прогноз цены</p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(prediction.result.predicted_price)}
-                        </p>
+                  <h4 className="text-md font-semibold mb-4 text-gray-700 dark:text-gray-300">Результаты прогноза</h4>
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Прогнозируемая цена</span>
+                        <div className="flex items-center">
+                          <span className={`text-xl font-bold ${
+                            prediction.result.predicted_price > prediction.request.current_price 
+                              ? 'text-green-600 dark:text-green-400' 
+                              : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {formatPrice(prediction.result.predicted_price)}
+                          </span>
+                          {prediction.result.predicted_price > prediction.request.current_price ? (
+                            <TrendingUp className="ml-2 h-5 w-5 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <TrendingDown className="ml-2 h-5 w-5 text-red-600 dark:text-red-400" />
+                          )}
+                        </div>
                       </div>
-                      <div className="bg-white dark:bg-gray-800 p-4 rounded-md shadow-sm">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Прогноз продаж (неделя)</p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {Math.round(prediction.result.predicted_sales)} шт.
-                        </p>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Прогнозируемый рост спроса</span>
+                        <div className="flex items-center">
+                          <span className={`text-xl font-bold ${
+                            prediction.result.demand_growth_percentage > 0 
+                              ? 'text-green-600 dark:text-green-400' 
+                              : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {prediction.result.demand_growth_percentage > 0 ? '+' : ''}
+                            {prediction.result.demand_growth_percentage}%
+                          </span>
+                          {prediction.result.demand_growth_percentage > 0 ? (
+                            <TrendingUp className="ml-2 h-5 w-5 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <TrendingDown className="ml-2 h-5 w-5 text-red-600 dark:text-red-400" />
+                          )}
+                        </div>
                       </div>
-                      <div className="bg-white dark:bg-gray-800 p-4 rounded-md shadow-sm">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Прогноз продаж (день)</p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {(prediction.result.predicted_sales / 7).toFixed(1)} шт.
-                        </p>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Доверительный интервал</span>
+                        <span className="text-lg font-medium text-gray-900 dark:text-white">
+                          {formatPrice(prediction.result.confidence_interval[0])} - {formatPrice(prediction.result.confidence_interval[1])}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <BarChart2 className="h-5 w-5 text-gray-400 mr-2 mt-1" />
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400 block mb-1">Рекомендации</span>
+                          <span className="text-gray-900 dark:text-white">{prediction.result.recommendations}</span>
+                        </div>
                       </div>
                     </div>
                   </div>

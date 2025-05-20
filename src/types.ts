@@ -1,31 +1,19 @@
 export interface PredictionRequest {
+  // Required fields
   product_name: string;
-  brand: string;
   category: string;
+  current_price: number;
   region: string;
-  seller: string;
-  price: number;
-  original_price: number;
-  discount_percentage: number;
-  stock_level: number;
-  customer_rating: number;
-  review_count: number;
-  delivery_days: number;
-  is_weekend: boolean;
-  is_holiday: boolean;
-  day_of_week: number;
-  month: number;
-  quarter: number;
-  sales_quantity_lag_1: number;
-  price_lag_1: number;
-  sales_quantity_lag_3: number;
-  price_lag_3: number;
-  sales_quantity_lag_7: number;
-  price_lag_7: number;
-  sales_quantity_rolling_mean_3: number;
-  price_rolling_mean_3: number;
-  sales_quantity_rolling_mean_7: number;
-  price_rolling_mean_7: number;
+  
+  // Optional fields
+  brand?: string;
+  stock_level?: number;
+  customer_rating?: number;
+  review_count?: number;
+  delivery_days?: number;
+  is_promo?: boolean;
+  competitor_prices?: number[];
+  historical_prices?: number[];
 }
 
 export interface PredictionRequestMinimal {
@@ -43,7 +31,9 @@ export interface PredictionRequestMinimal {
 
 export interface PredictionResult {
   predicted_price: number;
-  predicted_sales: number;
+  demand_growth_percentage: number;
+  confidence_interval: [number, number];
+  recommendations: string;
 }
 
 export interface ModelStatus {
@@ -61,7 +51,7 @@ export interface TrainingResult {
   };
 }
 
-// New types for authentication
+// Authentication types
 export interface UserRegisterRequest {
   email: string;
   password: string;
@@ -87,14 +77,27 @@ export interface AuthResponse {
 export interface PredictionHistory {
   id: string;
   user_id: string;
-  request: PredictionRequest | PredictionRequestMinimal;
+  request: PredictionRequest;
   result: PredictionResult;
   created_at: string;
-  endpoint_type: string;
-  minimal: boolean;
 }
 
 export interface UserStatistics {
   user_id: string;
   predictions: PredictionHistory[];
+}
+
+export interface TopProduct {
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+  current_price: number;
+  predicted_price: number;
+  demand_growth_percentage: number;
+}
+
+export interface TopProducts {
+  top_demand_growth: TopProduct[];
+  top_price_increase: TopProduct[];
 }
